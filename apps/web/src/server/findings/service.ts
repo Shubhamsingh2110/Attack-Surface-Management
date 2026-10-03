@@ -23,6 +23,7 @@ export async function syncFindingsForScan(scanRunId: string, assetId: string) {
   const candidates = detectFindings({ assetValue: asset.value, knownAssets: knownAssets.map((item) => item.value), observations: evidence.map((item) => ({ type: item.type, data: item.data })) });
   const now = new Date();
   const seen: string[] = [];
+  const completeEvidence = evidence.every((item) => item.data.status !== "unavailable");
   const notifications: Array<{ title: string; severity: string; riskScore: number; asset: string }> = [];
 
   for (const candidate of candidates) {
@@ -51,7 +52,7 @@ export async function syncFindingsForScan(scanRunId: string, assetId: string) {
     if (shouldReopen) await findingEvents.insertOne({ findingId: existing._id, type: "reopened", message: "Finding observed again and reopened.", fromStatus: existing.status, toStatus: "open", createdAt: now });
   }
 
-  const stale = await findings.find({ assetId: assetObjectId, status: { $in: ["open", "investigating", "accepted"] }, ...(seen.length ? { fingerprint: { $nin: seen } } : {}) }).toArray();
+  const stale = completeEvidence ? await findings.find({ assetId: assetObjectId, status: { $in: ["open", "investigating", "accepted"] }, ...(seen.length ? { fingerprint: { $nin: seen } } : {}) }).toArray() : [];
   for (const finding of stale) {
     await findings.updateOne({ _id: finding._id }, { $set: { status: "resolved", resolvedAt: now, updatedAt: now } });
     await findingEvents.insertOne({ findingId: finding._id, type: "resolved", message: "Finding was not observed in the latest completed scan.", fromStatus: finding.status, toStatus: "resolved", createdAt: now });

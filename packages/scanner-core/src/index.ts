@@ -114,8 +114,13 @@ export async function postJsonToPublicUrl(target: string, body: unknown, headers
 }
 
 export async function scanCertificateTransparency(hostname: string) {
-  const response = await fetch(`https://crt.sh/?q=${encodeURIComponent(`%.${hostname}`)}&output=json`, { signal: AbortSignal.timeout(10_000), headers: { Accept: "application/json", "User-Agent": "ASM-Control/1.0" } });
-  if (!response.ok) throw new Error(`Certificate Transparency provider returned ${response.status}.`);
+  let response: Response | undefined;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    response = await fetch(`https://crt.sh/?q=${encodeURIComponent(`%.${hostname}`)}&output=json`, { signal: AbortSignal.timeout(10_000), headers: { Accept: "application/json", "User-Agent": "ASM-Control/1.0" } });
+    if (response.ok || (response.status < 500 && response.status !== 429)) break;
+    if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
+  }
+  if (!response?.ok) throw new Error(`Certificate Transparency provider returned ${response?.status ?? "no response"}.`);
   const rows = await response.json() as Array<{ name_value?: string; issuer_name?: string; not_before?: string; not_after?: string }>;
   const names = [...new Set(rows.flatMap((row) => (row.name_value ?? "").split("\n")).map((name) => name.replace(/^\*\./, "").toLowerCase()).filter((name) => name === hostname || name.endsWith(`.${hostname}`)))].slice(0, 500);
   return { names, certificateCount: rows.length, sampledIssuers: [...new Set(rows.map((row) => row.issuer_name).filter(Boolean))].slice(0, 20) };

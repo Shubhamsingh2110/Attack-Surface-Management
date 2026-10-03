@@ -24,3 +24,12 @@ button, input { font: inherit; }
 .font-mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
 button { cursor: pointer; }
 ::selection { background: rgba(57, 230, 163, 0.25); }
+
+@keyframes scan-progress {
+  from { transform: translateX(-120%); }
+  to { transform: translateX(420%); }
+}
+.scan-progress { animation: scan-progress 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .scan-progress { animation: none; width: 100%; opacity: 0.55; }
+}

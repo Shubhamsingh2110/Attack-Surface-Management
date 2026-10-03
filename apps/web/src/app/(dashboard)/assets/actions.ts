@@ -2,9 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createAssetSchema, createChallengeSchema, assetIdSchema } from "@asm/contracts/assets";
+import { createAssetSchema, createChallengeSchema, assetIdSchema, authorizePassiveScanSchema } from "@asm/contracts/assets";
+import { writeAuditLog } from "@/server/audit/log";
 import { getCurrentAdmin } from "@/server/auth/session";
-import { createAsset, createOwnershipChallenge, verifyAssetOwnership } from "@/server/assets/service";
+import { attestPassiveScanAuthorization, createAsset, createOwnershipChallenge, verifyAssetOwnership } from "@/server/assets/service";
 import { createScanRun } from "@/server/scans/service";
 
 function done(message: string, error = false): never {
@@ -42,6 +43,19 @@ export async function verifyAssetAction(formData: FormData) {
   try { await verifyAssetOwnership(parsed.data); revalidatePath("/assets"); }
   catch (error) { done(error instanceof Error ? error.message : "Verification failed.", true); }
   done("Asset ownership verified.");
+}
+
+export async function authorizePassiveScanAction(formData: FormData) {
+  const admin = await getCurrentAdmin();
+  if (!admin) done("Unauthorized", true);
+  const parsed = authorizePassiveScanSchema.safeParse({ assetId: formData.get("assetId"), authorizationBasis: formData.get("authorizationBasis"), confirmed: formData.get("confirmed") });
+  if (!parsed.success) done(parsed.error.issues[0]?.message ?? "Authorization confirmation is required.", true);
+  try {
+    const result = await attestPassiveScanAuthorization(parsed.data.assetId, parsed.data.authorizationBasis, admin.id);
+    await writeAuditLog({ event: "asset.passive_scan_authorized", actorId: result.actorId, outcome: "success", metadata: { asset: result.asset, authorizationBasis: parsed.data.authorizationBasis } });
+    revalidatePath("/assets");
+  } catch (error) { done(error instanceof Error ? error.message : "Unable to authorize passive scanning.", true); }
+  done("Passive assessment authorization recorded. You can now scan this asset.");
 }
 
 export async function startScanAction(formData: FormData) {

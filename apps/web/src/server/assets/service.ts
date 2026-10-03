@@ -74,6 +74,21 @@ export async function verifyAssetOwnership(assetId: string) {
   else observed = [await fetchVerificationFile(asset.value)];
   if (!observed.some((value) => digest(value.trim()) === challenge.tokenHash)) throw new Error("Verification record was not found. DNS changes may take time to propagate.");
   const now = new Date();
-  await assets.updateOne({ _id: objectId }, { $set: { ownershipStatus: "verified", verifiedAt: now, updatedAt: now } });
+  await assets.updateOne({ _id: objectId }, { $set: { ownershipStatus: "verified", verificationMethod: challenge.method, verifiedAt: now, updatedAt: now } });
   await ownershipChallenges.deleteMany({ assetId: objectId });
+}
+
+export async function attestPassiveScanAuthorization(assetId: string, authorizationBasis: string, adminId: string) {
+  const { assets, ownershipChallenges } = await collections();
+  const objectId = new ObjectId(assetId);
+  const asset = await assets.findOne({ _id: objectId });
+  if (!asset) throw new Error("Asset not found.");
+  if (asset.type !== "domain" && asset.type !== "subdomain") throw new Error("Passive scanning currently supports domain assets only.");
+  const now = new Date();
+  await assets.updateOne({ _id: objectId }, { $set: {
+    ownershipStatus: "verified", verificationMethod: "authorization_attestation",
+    authorizationBasis, authorizationAttestedAt: now, verifiedAt: now, updatedAt: now,
+  } });
+  await ownershipChallenges.deleteMany({ assetId: objectId });
+  return { asset: asset.value, actorId: new ObjectId(adminId) };
 }

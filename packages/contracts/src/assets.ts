@@ -21,6 +21,12 @@ export const createChallengeSchema = z.object({
 
 export const assetIdSchema = z.string().regex(/^[a-f\d]{24}$/i);
 
+export const authorizePassiveScanSchema = z.object({
+  assetId: assetIdSchema,
+  authorizationBasis: z.string().trim().min(10, "Describe why you are authorized to assess this asset.").max(500),
+  confirmed: z.literal("yes", { error: "You must confirm authorization before scanning." }),
+});
+
 export type AssetType = z.infer<typeof assetTypeSchema>;
 export type AssetCriticality = z.infer<typeof assetCriticalitySchema>;
 export type VerificationMethod = z.infer<typeof verificationMethodSchema>;

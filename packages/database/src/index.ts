@@ -44,6 +44,9 @@ export interface AssetDocument {
   criticality: AssetCriticality;
   tags: string[];
   ownershipStatus: "pending" | "verified" | "failed";
+  verificationMethod?: "dns_txt" | "http_file" | "authorization_attestation";
+  authorizationBasis?: string;
+  authorizationAttestedAt?: Date;
   verifiedAt?: Date;
   lastScanAt?: Date;
   nextScanAt?: Date;
@@ -68,6 +71,7 @@ export interface ScanRunDocument {
   status: "queued" | "running" | "completed" | "failed";
   workflowRunId?: string;
   error?: string;
+  warning?: string;
   observationCount: number;
   createdBy: ObjectId;
   createdAt: Date;
