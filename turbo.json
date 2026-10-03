@@ -8,7 +8,7 @@
     },
     "build": {
       "dependsOn": ["^build"],
-      "env": ["MONGODB_URI", "MONGODB_DB", "SESSION_TTL_HOURS", "APP_URL", "QSTASH_TOKEN", "QSTASH_CURRENT_SIGNING_KEY", "QSTASH_NEXT_SIGNING_KEY", "CRON_SECRET"],
+      "env": ["MONGODB_URI", "MONGODB_DB", "SESSION_TTL_HOURS", "APP_URL", "QSTASH_TOKEN", "QSTASH_CURRENT_SIGNING_KEY", "QSTASH_NEXT_SIGNING_KEY", "CRON_SECRET", "CLOUDINARY_URL", "INTEGRATION_ENCRYPTION_KEY", "REPORT_RETENTION_DAYS"],
       "inputs": ["$TURBO_DEFAULT$", ".env.production.local", ".env.local", ".env.production", ".env"],
       "outputs": [".next/**", "!.next/cache/**", "!.next/dev/**", "dist/**"]
     },

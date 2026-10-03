@@ -1,6 +1,8 @@
 import type { ObjectId } from "mongodb";
 import type { AssetCriticality, AssetType, ScanFrequency, VerificationMethod } from "@asm/contracts/assets";
 import type { FindingConfidence, FindingSeverity, FindingStatus } from "@asm/contracts/findings";
+import type { IntegrationType } from "@asm/contracts/integrations";
+import type { ReportFormat, ReportKind } from "@asm/contracts/reports";
 import { getDatabase } from "./mongodb";
 
 export { getDatabase } from "./mongodb";
@@ -124,6 +126,45 @@ export interface RiskSnapshotDocument {
   createdAt: Date;
 }
 
+export interface ReportDocument {
+  kind: ReportKind;
+  format: ReportFormat;
+  status: "generating" | "ready" | "failed";
+  cloudinaryPublicId?: string;
+  bytes?: number;
+  error?: string;
+  createdBy: ObjectId;
+  createdAt: Date;
+  expiresAt: Date;
+}
+
+export interface IntegrationDocument {
+  name: string;
+  type: IntegrationType;
+  encryptedConfig: string;
+  enabled: boolean;
+  createdBy: ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface DeliveryDocument {
+  integrationId: ObjectId;
+  event: "test" | "finding.created";
+  status: "pending" | "delivered" | "failed";
+  attemptCount: number;
+  responseStatus?: number;
+  error?: string;
+  createdAt: Date;
+  deliveredAt?: Date;
+}
+
+export interface RateLimitDocument {
+  key: string;
+  count: number;
+  expiresAt: Date;
+}
+
 export async function collections() {
   const db = await getDatabase();
   return {
@@ -137,11 +178,15 @@ export async function collections() {
     findings: db.collection<FindingDocument>("findings"),
     findingEvents: db.collection<FindingEventDocument>("findingEvents"),
     riskSnapshots: db.collection<RiskSnapshotDocument>("riskSnapshots"),
+    reports: db.collection<ReportDocument>("reports"),
+    integrations: db.collection<IntegrationDocument>("integrations"),
+    deliveries: db.collection<DeliveryDocument>("deliveries"),
+    rateLimits: db.collection<RateLimitDocument>("rateLimits"),
   };
 }
 
 export async function ensureIndexes() {
-  const { admins, sessions, auditLogs, assets, ownershipChallenges, scanRuns, observations, findings, findingEvents, riskSnapshots } = await collections();
+  const { admins, sessions, auditLogs, assets, ownershipChallenges, scanRuns, observations, findings, findingEvents, riskSnapshots, reports, integrations, deliveries, rateLimits } = await collections();
   await Promise.all([
     admins.createIndex({ email: 1 }, { unique: true, name: "admin_email_unique" }),
     sessions.createIndex({ tokenHash: 1 }, { unique: true, name: "session_token_unique" }),
@@ -164,5 +209,13 @@ export async function ensureIndexes() {
     findingEvents.createIndex({ findingId: 1, createdAt: -1 }, { name: "finding_event_timeline" }),
     riskSnapshots.createIndex({ scanRunId: 1 }, { unique: true, name: "risk_snapshot_scan_unique" }),
     riskSnapshots.createIndex({ createdAt: -1 }, { name: "risk_snapshot_created" }),
+    reports.createIndex({ createdAt: -1 }, { name: "report_created" }),
+    reports.createIndex({ expiresAt: 1, status: 1 }, { name: "report_retention" }),
+    integrations.createIndex({ name: 1 }, { unique: true, name: "integration_name_unique" }),
+    integrations.createIndex({ enabled: 1, type: 1 }, { name: "integration_enabled_type" }),
+    deliveries.createIndex({ integrationId: 1, createdAt: -1 }, { name: "delivery_integration_created" }),
+    deliveries.createIndex({ status: 1, createdAt: -1 }, { name: "delivery_status_created" }),
+    rateLimits.createIndex({ key: 1 }, { unique: true, name: "rate_limit_key_unique" }),
+    rateLimits.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, name: "rate_limit_expiry_ttl" }),
   ]);
 }

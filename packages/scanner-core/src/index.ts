@@ -88,6 +88,31 @@ export async function fetchVerificationFile(hostname: string) {
   return (await pinnedRequest(hostname, "/.well-known/asm-verification.txt", "GET")).body.trim();
 }
 
+export async function postJsonToPublicUrl(target: string, body: unknown, headers: Record<string, string> = {}) {
+  const url = new URL(target);
+  if (url.protocol !== "https:" || url.username || url.password) throw new Error("Integration endpoints must be HTTPS URLs without embedded credentials.");
+  const [address] = await resolvePublicAddresses(url.hostname);
+  const payload = Buffer.from(JSON.stringify(body));
+  if (payload.length > 64 * 1024) throw new Error("Integration payload exceeds 64 KiB.");
+  return new Promise<{ status: number; body: string }>((resolve, reject) => {
+    const request = https.request({
+      hostname: url.hostname, servername: url.hostname, port: url.port ? Number(url.port) : 443,
+      path: `${url.pathname}${url.search}`, method: "POST",
+      headers: { "User-Agent": "ASM-Control/1.0", Accept: "application/json", "Content-Type": "application/json", "Content-Length": String(payload.length), ...headers },
+      lookup: (_host, _options, callback) => callback(null, address, address.includes(":") ? 6 : 4),
+      timeout: 10_000, rejectUnauthorized: true,
+    }, (response) => {
+      let responseBody = "";
+      response.setEncoding("utf8");
+      response.on("data", (chunk: string) => { if (responseBody.length < 4_096) responseBody += chunk; });
+      response.on("end", () => resolve({ status: response.statusCode ?? 0, body: responseBody.slice(0, 4_096) }));
+    });
+    request.once("timeout", () => request.destroy(new Error("Integration request timed out.")));
+    request.once("error", reject);
+    request.end(payload);
+  });
+}
+
 export async function scanCertificateTransparency(hostname: string) {
   const response = await fetch(`https://crt.sh/?q=${encodeURIComponent(`%.${hostname}`)}&output=json`, { signal: AbortSignal.timeout(10_000), headers: { Accept: "application/json", "User-Agent": "ASM-Control/1.0" } });
   if (!response.ok) throw new Error(`Certificate Transparency provider returned ${response.status}.`);

@@ -7,6 +7,8 @@
     "./assets": "./src/assets.ts",
     "./auth": "./src/auth.ts",
     "./findings": "./src/findings.ts",
+    "./integrations": "./src/integrations.ts",
+    "./reports": "./src/reports.ts",
     "./scans": "./src/scans.ts"
   },
   "scripts": {

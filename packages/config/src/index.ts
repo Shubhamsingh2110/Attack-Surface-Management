@@ -12,6 +12,23 @@ export function getRuntimeEnv() {
   return result.data;
 }
 
+const reportEnvSchema = z.object({
+  CLOUDINARY_URL: z.string().min(1),
+  REPORT_RETENTION_DAYS: z.coerce.number().int().min(1).max(3650).default(30),
+});
+
+export function getReportEnv() {
+  const result = reportEnvSchema.safeParse(process.env);
+  if (!result.success) throw new Error(`Invalid report environment: ${result.error.issues.map((issue) => issue.path.join(".")).join(", ")}`);
+  return result.data;
+}
+
+export function getIntegrationEncryptionKey() {
+  const result = z.string().min(1).safeParse(process.env.INTEGRATION_ENCRYPTION_KEY);
+  if (!result.success) throw new Error("INTEGRATION_ENCRYPTION_KEY is not configured.");
+  return result.data;
+}
+
 const adminSchema = z.object({
   ADMIN_EMAIL: z.email().transform((value) => value.toLowerCase()),
   ADMIN_PASSWORD: z.string().min(14).max(128),

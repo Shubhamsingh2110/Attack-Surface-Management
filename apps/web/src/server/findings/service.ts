@@ -5,6 +5,7 @@ import type { FindingDocument } from "@asm/database";
 import { collections, ensureIndexes } from "@asm/database";
 import type { FindingStatus } from "@asm/contracts/findings";
 import { calculateRisk, detectFindings, slaDays } from "@asm/risk-engine";
+import { notifyNewFinding } from "@/server/integrations/service";
 
 function fingerprint(assetId: string, ruleId: string, key: string) { return createHash("sha256").update(`${assetId}:${ruleId}:${key}`).digest("hex"); }
 
@@ -22,6 +23,7 @@ export async function syncFindingsForScan(scanRunId: string, assetId: string) {
   const candidates = detectFindings({ assetValue: asset.value, knownAssets: knownAssets.map((item) => item.value), observations: evidence.map((item) => ({ type: item.type, data: item.data })) });
   const now = new Date();
   const seen: string[] = [];
+  const notifications: Array<{ title: string; severity: string; riskScore: number; asset: string }> = [];
 
   for (const candidate of candidates) {
     const value = fingerprint(assetId, candidate.ruleId, candidate.key);
@@ -37,6 +39,7 @@ export async function syncFindingsForScan(scanRunId: string, assetId: string) {
         slaDueAt: new Date(now.getTime() + slaDays(candidate.severity) * 86_400_000), createdAt: now, updatedAt: now,
       });
       await findingEvents.insertOne({ findingId: result.insertedId, type: "created", message: "Finding created by passive discovery.", createdAt: now });
+      if (candidate.severity === "critical" || candidate.severity === "high") notifications.push({ title: candidate.title, severity: candidate.severity, riskScore: risk.riskScore, asset: asset.value });
       continue;
     }
     const shouldReopen = existing.status === "resolved" || (existing.status === "accepted" && existing.acceptedUntil && existing.acceptedUntil <= now);
@@ -57,6 +60,7 @@ export async function syncFindingsForScan(scanRunId: string, assetId: string) {
   const severityCounts = activeForAsset.reduce<Record<string, number>>((counts, finding) => ({ ...counts, [finding.severity]: (counts[finding.severity] ?? 0) + 1 }), {});
   const snapshotRisk = activeForAsset.length ? Math.round(activeForAsset.slice().sort((a, b) => b.riskScore - a.riskScore).slice(0, 5).reduce((sum, finding) => sum + finding.riskScore, 0) / Math.min(activeForAsset.length, 5)) : 0;
   await riskSnapshots.updateOne({ scanRunId: scanObjectId }, { $set: { scanRunId: scanObjectId, assetId: assetObjectId, riskScore: snapshotRisk, openCount: activeForAsset.length, severityCounts, createdAt: now } }, { upsert: true });
+  await Promise.allSettled(notifications.map(notifyNewFinding));
   return { detected: candidates.length, resolved: stale.length };
 }
 
