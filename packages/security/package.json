@@ -1,0 +1,13 @@
+{
+  "name": "@asm/security",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./constants": "./src/constants.ts",
+    "./password": "./src/password.ts"
+  },
+  "scripts": { "typecheck": "tsc --noEmit" },
+  "dependencies": { "argon2": "^0.45.1" },
+  "devDependencies": { "typescript": "^5" }
+}
