@@ -3,10 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": { "./auth": "./src/auth.ts" },
+  "exports": {
+    "./assets": "./src/assets.ts",
+    "./auth": "./src/auth.ts",
+    "./findings": "./src/findings.ts",
+    "./scans": "./src/scans.ts"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run --no-cache"
   },
   "dependencies": { "zod": "^4.6.5" },
   "devDependencies": { "typescript": "^5", "vitest": "^5.0.3" }

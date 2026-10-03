@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  transpilePackages: ["@asm/config", "@asm/contracts", "@asm/database", "@asm/security"],
+  transpilePackages: ["@asm/config", "@asm/contracts", "@asm/database", "@asm/risk-engine", "@asm/scanner-core", "@asm/security"],
   async headers() {
     return [{
       source: "/(.*)",

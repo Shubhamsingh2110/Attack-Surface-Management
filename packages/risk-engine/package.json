@@ -1,0 +1,10 @@
+{
+  "name": "@asm/risk-engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "typecheck": "tsc --noEmit", "test": "vitest run --no-cache" },
+  "dependencies": { "@asm/contracts": "*" },
+  "devDependencies": { "typescript": "^5", "vitest": "^5.0.3" }
+}

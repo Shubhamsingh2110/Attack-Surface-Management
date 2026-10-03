@@ -3,7 +3,13 @@ import { redirect } from "next/navigation";
 import { logoutAction } from "@/app/(auth)/login/actions";
 import { getCurrentAdmin } from "@/server/auth/session";
 
-const navigation = ["Overview", "Assets", "Findings", "Scans", "Reports"];
+const navigation = [
+  { label: "Overview", href: "/dashboard" },
+  { label: "Assets", href: "/assets" },
+  { label: "Findings", href: "/findings" },
+  { label: "Scans", href: "/scans" },
+  { label: "Reports", href: "/reports" },
+];
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const admin = await getCurrentAdmin();
@@ -18,7 +24,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </Link>
         <nav className="mt-8 hidden space-y-1 lg:block" aria-label="Primary navigation">
           {navigation.map((item, index) => (
-            <span key={item} className={`block rounded-lg px-3 py-2.5 text-sm ${index === 0 ? "bg-emerald-300/10 text-[var(--accent)]" : "text-[var(--muted)]"}`}>{item}</span>
+            <Link href={item.href} key={item.href} className={`block rounded-lg px-3 py-2.5 text-sm transition hover:bg-white/5 hover:text-white ${index === 0 ? "text-[var(--accent)]" : "text-[var(--muted)]"}`}>{item.label}</Link>
           ))}
         </nav>
         <div className="mt-8 hidden border-t border-[var(--border)] pt-5 lg:block">

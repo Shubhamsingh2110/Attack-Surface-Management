@@ -48,4 +48,29 @@ Turborepo executes each command only in workspaces that define it and respects p
 
 ## Vercel
 
-Import the repository and set the Vercel Root Directory to `apps/web`. Configure `MONGODB_URI`, `MONGODB_DB`, and `SESSION_TTL_HOURS` in Vercel. Do not retain `ADMIN_PASSWORD` after seeding or resetting. Use a least-privilege Atlas database user.
+Import the repository and set the Vercel Root Directory to `apps/web`. Configure these variables:
+
+```text
+MONGODB_URI
+MONGODB_DB
+SESSION_TTL_HOURS
+APP_URL
+QSTASH_TOKEN
+QSTASH_CURRENT_SIGNING_KEY
+QSTASH_NEXT_SIGNING_KEY
+CRON_SECRET
+```
+
+`APP_URL` must be the deployed HTTPS origin without a trailing slash. Copy the QStash values from Upstash Workflow. Vercel supplies `CRON_SECRET` to authenticated cron invocations when it is configured in the project.
+
+Do not retain `ADMIN_PASSWORD` after seeding or resetting. Use a least-privilege Atlas database user.
+
+## Phase 2 scanning boundary
+
+Automated passive scans require DNS TXT or HTTPS file ownership verification. The scanner performs DNS, Certificate Transparency, RDAP, TLS, and HTTPS header discovery. Connections are pinned to a pre-validated public address; private, loopback, link-local, documentation, multicast, and metadata destinations are rejected. IP and CIDR records are inventory-only until a later ownership mechanism is introduced.
+
+## Phase 3 findings and risk
+
+Completed scans automatically evaluate normalized observations for certificate trust and expiration, missing browser security headers, server technology disclosure, HTTP errors, and unmanaged certificate-backed subdomains. Findings use deterministic fingerprints for deduplication, reopen when they recur, and resolve when absent from a later completed scan.
+
+Risk scores retain severity, confidence, exposure, asset criticality, and exploitability factors. Findings support investigation, resolution, false-positive handling, expiring risk acceptance, comments, bulk status updates, SLA deadlines, and immutable activity events. The dashboard reports live exposure metrics, severity distribution, top risks, SLA pressure, and historical risk snapshots.

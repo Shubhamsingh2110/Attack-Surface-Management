@@ -1,0 +1,9 @@
+{
+  "name": "@asm/scanner-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts", "./safety": "./src/safety.ts" },
+  "scripts": { "typecheck": "tsc --noEmit", "test": "vitest run --no-cache" },
+  "devDependencies": { "@types/node": "^24.19.1", "typescript": "^5", "vitest": "^5.0.3" }
+}

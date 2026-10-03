@@ -1,0 +1,26 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { getFindingDetails } from "@/server/findings/service";
+import { addCommentAction, updateFindingAction } from "../actions";
+
+export const metadata: Metadata = { title: "Finding details" };
+
+export default async function FindingDetailsPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ message?: string; error?: string }> }) {
+  const [finding, query] = await Promise.all([getFindingDetails((await params).id), searchParams]);
+  if (!finding) notFound();
+  return <div className="mx-auto max-w-6xl">
+    <Link href="/findings" className="text-sm text-[var(--muted)]">← Findings</Link>
+    {(query.message || query.error) && <p className={`mt-5 rounded-lg border px-4 py-3 text-sm ${query.error ? "border-red-400/20 text-[var(--danger)]" : "border-emerald-300/20 text-[var(--accent)]"}`}>{query.error ?? query.message}</p>}
+    <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px]">
+      <main><div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6"><div className="flex flex-wrap gap-2 text-xs uppercase"><span className="rounded bg-red-400/10 px-2.5 py-1 text-red-300">{finding.severity}</span><span className="rounded bg-white/5 px-2.5 py-1">{finding.confidence} confidence</span><span className="rounded bg-white/5 px-2.5 py-1">{finding.status.replace("_", " ")}</span></div><h1 className="mt-5 text-3xl font-semibold">{finding.title}</h1><p className="mt-2 font-mono text-sm text-[var(--accent)]">{finding.assetValue}</p><p className="mt-6 leading-7 text-slate-300">{finding.description}</p><h2 className="mt-7 font-semibold">Recommended remediation</h2><p className="mt-2 leading-7 text-[var(--muted)]">{finding.remediation}</p></div>
+        <section className="mt-5 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6"><h2 className="font-semibold">Evidence</h2><pre className="mt-4 max-h-96 overflow-auto rounded-lg bg-[#080d15] p-4 text-xs leading-5 text-slate-300">{JSON.stringify(finding.evidence, null, 2)}</pre></section>
+        <section className="mt-5 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6"><h2 className="font-semibold">Activity</h2><form action={addCommentAction} className="mt-4 flex gap-2"><input type="hidden" name="findingId" value={finding._id}/><input name="comment" required placeholder="Add investigation note" className="min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-[#080d15] px-3 py-2"/><button className="rounded-lg bg-white/10 px-4 py-2">Comment</button></form><div className="mt-5 space-y-4">{finding.events.map((event) => <div key={event._id} className="border-l border-[var(--border)] pl-4"><p className="text-sm">{event.message}</p><p className="mt-1 text-xs text-[var(--muted)]">{event.type.replace("_", " ")} · {event.createdAt.toLocaleString()}</p></div>)}</div></section>
+      </main>
+      <aside className="space-y-5"><section className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5"><p className="text-sm text-[var(--muted)]">Risk score</p><p className="mt-2 text-5xl font-semibold">{finding.riskScore}</p><div className="mt-5 space-y-2 text-xs text-[var(--muted)]">{Object.entries(finding.riskFactors).map(([key, value]) => <div key={key} className="flex justify-between"><span>{key}</span><span>{value}</span></div>)}</div></section>
+        <form action={updateFindingAction} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5"><h2 className="font-semibold">Workflow</h2><input type="hidden" name="findingId" value={finding._id}/><select name="status" defaultValue={finding.status} className="mt-4 w-full rounded-lg border border-[var(--border)] bg-[#080d15] px-3 py-2"><option value="open">Open</option><option value="investigating">Investigating</option><option value="resolved">Resolved</option><option value="accepted">Risk accepted</option><option value="false_positive">False positive</option></select><label className="mt-4 block text-xs text-[var(--muted)]">Risk acceptance expiry</label><input type="date" name="acceptedUntil" className="mt-2 w-full rounded-lg border border-[var(--border)] bg-[#080d15] px-3 py-2"/><textarea name="comment" placeholder="Reason or remediation note" className="mt-3 min-h-24 w-full rounded-lg border border-[var(--border)] bg-[#080d15] px-3 py-2"/><button className="mt-3 w-full rounded-lg bg-[var(--accent)] px-4 py-2 font-semibold text-[#04110c]">Update finding</button></form>
+        <section className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 text-sm"><div className="flex justify-between"><span className="text-[var(--muted)]">First seen</span><span>{finding.firstSeenAt.toLocaleDateString()}</span></div><div className="mt-3 flex justify-between"><span className="text-[var(--muted)]">Last seen</span><span>{finding.lastSeenAt.toLocaleDateString()}</span></div><div className="mt-3 flex justify-between"><span className="text-[var(--muted)]">SLA due</span><span>{finding.slaDueAt?.toLocaleDateString() ?? "—"}</span></div><div className="mt-3 flex justify-between"><span className="text-[var(--muted)]">Recurrences</span><span>{finding.recurrenceCount}</span></div></section>
+      </aside>
+    </div>
+  </div>;
+}
