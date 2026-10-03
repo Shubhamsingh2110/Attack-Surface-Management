@@ -1,0 +1,38 @@
+{
+  "name": "attack-surface-management",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build --turbopack",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "admin:seed": "tsx scripts/seed-admin.ts",
+    "admin:reset-password": "tsx scripts/reset-admin-password.ts"
+  },
+  "dependencies": {
+    "argon2": "^0.45.1",
+    "mongodb": "^7.7.0",
+    "next": "16.3.8",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "server-only": "^0.0.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^24.19.1",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.8",
+    "tailwindcss": "^4",
+    "tsx": "^4.20.6",
+    "typescript": "^5",
+    "vitest": "^5.0.3"
+  },
+  "packageManager": "npm@11.13.0"
+}
