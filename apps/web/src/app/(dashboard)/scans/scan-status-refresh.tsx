@@ -20,7 +20,7 @@ export function ScanStatusRefresh({ active }: { active: boolean }) {
         <span className="absolute size-6 animate-pulse rounded-full bg-emerald-300/10" />
         <span className="size-2 rounded-full bg-[var(--accent)] shadow-[0_0_12px_var(--accent)]" />
       </span>
-      <div><p className="text-sm font-medium text-[var(--accent)]">Passive assessment in progress</p><p className="mt-1 text-xs text-[var(--muted)]">Collecting DNS, certificates, RDAP, TLS and HTTP evidence. New results appear automatically.</p></div>
+      <div><p className="text-sm font-medium text-[var(--accent)]">Passive assessment in progress</p><p className="mt-1 text-xs text-[var(--muted)]">Checking DNS, SPF/DMARC, SSL certificates, web technologies, vulnerabilities, RDAP and HTTP security. New results appear automatically.</p></div>
     </div>
     <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/5"><div className="scan-progress h-full w-1/3 rounded-full bg-[var(--accent)]" /></div>
   </div>;

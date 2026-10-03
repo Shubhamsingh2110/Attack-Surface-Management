@@ -75,15 +75,35 @@ async function expireRiskAcceptances() {
   }
 }
 
-export async function listFindings(filters: { status?: string; severity?: string; query?: string } = {}) {
+export async function listFindings(filters: { status?: string; severity?: string; assetId?: string; query?: string } = {}) {
   await expireRiskAcceptances();
   const { findings, assets } = await collections();
   const filter: Filter<FindingDocument> = {};
   if (filters.status && ["open", "investigating", "resolved", "accepted", "false_positive"].includes(filters.status)) filter.status = filters.status as FindingStatus;
   if (filters.severity && ["critical", "high", "medium", "low", "info"].includes(filters.severity)) filter.severity = filters.severity as FindingDocument["severity"];
-  if (filters.query) filter.$or = [{ title: { $regex: filters.query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), $options: "i" } }];
+  if (filters.assetId && ObjectId.isValid(filters.assetId)) filter.assetId = new ObjectId(filters.assetId);
+  if (filters.query) {
+    const escaped = filters.query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const matchingAssets = await assets.find({ value: { $regex: escaped, $options: "i" } }, { projection: { _id: 1 } }).limit(100).toArray();
+    filter.$or = [
+      { title: { $regex: escaped, $options: "i" } },
+      { description: { $regex: escaped, $options: "i" } },
+      { assetId: { $in: matchingAssets.map((asset) => asset._id) } },
+    ];
+  }
   const rows = await findings.find(filter).sort({ riskScore: -1, lastSeenAt: -1 }).limit(500).toArray();
-  return Promise.all(rows.map(async (finding) => ({ ...finding, _id: finding._id.toHexString(), assetValue: (await assets.findOne({ _id: finding.assetId }))?.value ?? "Unknown asset" })));
+  const assetIds = [...new Set(rows.map((finding) => finding.assetId.toHexString()))];
+  const assetRows = assetIds.length ? await assets.find({ _id: { $in: assetIds.map((id) => new ObjectId(id)) } }).toArray() : [];
+  const assetValues = new Map(assetRows.map((asset) => [asset._id.toHexString(), asset.value]));
+  return rows.map((finding) => ({ ...finding, _id: finding._id.toHexString(), assetValue: assetValues.get(finding.assetId.toHexString()) ?? "Unknown asset" }));
+}
+
+export async function listFindingAssets() {
+  const { findings, assets } = await collections();
+  const ids = await findings.distinct("assetId");
+  if (!ids.length) return [];
+  const rows = await assets.find({ _id: { $in: ids } }, { projection: { value: 1 } }).sort({ value: 1 }).toArray();
+  return rows.map((asset) => ({ id: asset._id.toHexString(), value: asset.value }));
 }
 
 export async function getFindingDetails(id: string) {

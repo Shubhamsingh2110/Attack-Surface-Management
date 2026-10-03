@@ -9,7 +9,6 @@ const navigation = [
   { label: "Findings", href: "/findings" },
   { label: "Scans", href: "/scans" },
   { label: "Reports", href: "/reports" },
-  { label: "Integrations", href: "/integrations" },
 ];
 
 export function SidebarNavigation() {

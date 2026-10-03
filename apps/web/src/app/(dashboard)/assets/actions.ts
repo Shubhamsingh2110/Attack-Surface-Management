@@ -22,7 +22,7 @@ export async function addAssetAction(formData: FormData) {
   if (!parsed.success) done(parsed.error.issues[0]?.message ?? "Invalid asset", true);
   try { await createAsset({ ...parsed.data, adminId: admin.id }); revalidatePath("/assets"); }
   catch (error) { done(error instanceof Error && error.message.includes("duplicate") ? "That asset already exists." : error instanceof Error ? error.message : "Unable to add asset.", true); }
-  done("Asset added. Verify ownership before scanning.");
+  done("Asset added and ready for passive scanning.");
 }
 
 export async function createChallengeAction(formData: FormData) {

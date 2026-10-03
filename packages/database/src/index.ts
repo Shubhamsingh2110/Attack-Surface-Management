@@ -44,7 +44,7 @@ export interface AssetDocument {
   criticality: AssetCriticality;
   tags: string[];
   ownershipStatus: "pending" | "verified" | "failed";
-  verificationMethod?: "dns_txt" | "http_file" | "authorization_attestation";
+  verificationMethod?: "dns_txt" | "http_file" | "authorization_attestation" | "passive_public";
   authorizationBasis?: string;
   authorizationAttestedAt?: Date;
   verifiedAt?: Date;
@@ -82,7 +82,7 @@ export interface ScanRunDocument {
 export interface ObservationDocument {
   assetId: ObjectId;
   scanRunId: ObjectId;
-  type: "dns" | "tls" | "http" | "technology" | "certificates" | "rdap";
+  type: "dns" | "tls" | "http" | "technology" | "certificates" | "rdap" | "email_security" | "ssl_certificate";
   data: Record<string, unknown>;
   observedAt: Date;
 }

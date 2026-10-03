@@ -39,7 +39,7 @@ export async function createScanRun(assetId: string, adminId: string) {
   await failStaleScans();
   const { assets, scanRuns } = await collections();
   const asset = await assets.findOne({ _id: new ObjectId(assetId) });
-  if (!asset || asset.ownershipStatus !== "verified") throw new Error("Only verified assets can be scanned.");
+  if (!asset) throw new Error("Asset not found.");
   if (asset.type !== "domain" && asset.type !== "subdomain") throw new Error("Passive scanning currently supports domain assets only.");
   if (await scanRuns.countDocuments({ status: { $in: ["queued", "running"] } }) >= 5) throw new Error("Scan concurrency limit reached. Try again after an active scan finishes.");
   if (await scanRuns.findOne({ assetId: asset._id, status: { $in: ["queued", "running"] } })) throw new Error("This asset already has an active scan.");
@@ -90,8 +90,8 @@ export async function scanStep(scanRunId: string, assetId: string, type: "dns" |
   const { assets, observations } = await collections();
   const assetObjectId = new ObjectId(assetId);
   const scanObjectId = new ObjectId(scanRunId);
-  const asset = await assets.findOne({ _id: assetObjectId, ownershipStatus: "verified" });
-  if (!asset) throw new Error("Verified asset not found.");
+  const asset = await assets.findOne({ _id: assetObjectId });
+  if (!asset) throw new Error("Asset not found.");
   let data: Record<string, unknown>;
   try {
     data = type === "dns" ? await scanDns(asset.value) : type === "tls" ? await scanTls(asset.value) : type === "http" ? await scanHttp(asset.value) : type === "certificates" ? await scanCertificateTransparency(asset.value) : await scanRdap(asset.value);
@@ -99,6 +99,18 @@ export async function scanStep(scanRunId: string, assetId: string, type: "dns" |
     data = { status: "unavailable", error: error instanceof Error ? error.message.slice(0, 500) : `${type} provider unavailable` };
   }
   await observations.updateOne({ scanRunId: scanObjectId, type }, { $set: { assetId: assetObjectId, scanRunId: scanObjectId, type, data, observedAt: new Date() } }, { upsert: true });
+  if (type === "dns") {
+    const emailData = data.status === "unavailable" ? data : (data.emailSecurity && typeof data.emailSecurity === "object" ? data.emailSecurity as Record<string, unknown> : { spfRecords: [], dmarcRecords: [] });
+    await observations.updateOne({ scanRunId: scanObjectId, type: "email_security" }, { $set: { assetId: assetObjectId, scanRunId: scanObjectId, type: "email_security", data: emailData, observedAt: new Date() } }, { upsert: true });
+  }
+  if (type === "http") {
+    const technologyData = data.status === "unavailable" ? data : { technologies: data.technologies ?? [], technologyDetails: data.technologyDetails ?? [], vulnerabilityAssessment: "Detected versions are evaluated conservatively by the findings engine." };
+    await observations.updateOne({ scanRunId: scanObjectId, type: "technology" }, { $set: { assetId: assetObjectId, scanRunId: scanObjectId, type: "technology", data: technologyData, observedAt: new Date() } }, { upsert: true });
+  }
+  if (type === "tls") {
+    const certificateData = data.status === "unavailable" ? data : { authorized: data.authorized, authorizationError: data.authorizationError, protocol: data.protocol, cipher: data.cipher, subject: data.subject, issuer: data.issuer, validFrom: data.validFrom, validTo: data.validTo, subjectAltName: data.subjectAltName, fingerprint256: data.fingerprint256, serialNumber: data.serialNumber, keyBits: data.keyBits };
+    await observations.updateOne({ scanRunId: scanObjectId, type: "ssl_certificate" }, { $set: { assetId: assetObjectId, scanRunId: scanObjectId, type: "ssl_certificate", data: certificateData, observedAt: new Date() } }, { upsert: true });
+  }
   return data;
 }
 
@@ -118,7 +130,7 @@ export async function completeScan(scanRunId: string, assetId: string) {
 export async function queueDueScans() {
   const { assets } = await collections();
   const now = new Date();
-  const due = await assets.find({ ownershipStatus: "verified", scanFrequency: { $in: ["daily", "weekly"] }, $or: [{ nextScanAt: { $lte: now } }, { nextScanAt: { $exists: false } }] }).limit(20).toArray();
+  const due = await assets.find({ type: { $in: ["domain", "subdomain"] }, scanFrequency: { $in: ["daily", "weekly"] }, $or: [{ nextScanAt: { $lte: now } }, { nextScanAt: { $exists: false } }] }).limit(20).toArray();
   const results = await Promise.allSettled(due.map((asset) => createScanRun(asset._id.toHexString(), asset.createdBy.toHexString())));
   return { queued: results.filter((result) => result.status === "fulfilled").length, failed: results.filter((result) => result.status === "rejected").length };
 }

@@ -32,7 +32,8 @@ export async function createAsset(input: { type: AssetType; value: string; displ
   const now = new Date();
   const result = await assets.insertOne({
     type: input.type, value, displayName: input.displayName, criticality: input.criticality,
-    tags: [...new Set(input.tags.map((tag) => tag.toLowerCase()))], ownershipStatus: "pending", scanFrequency: input.scanFrequency,
+    tags: [...new Set(input.tags.map((tag) => tag.toLowerCase()))], ownershipStatus: input.type === "domain" || input.type === "subdomain" ? "verified" : "pending",
+    ...(input.type === "domain" || input.type === "subdomain" ? { verificationMethod: "passive_public" as const, verifiedAt: now } : {}), scanFrequency: input.scanFrequency,
     createdBy: new ObjectId(input.adminId), createdAt: now, updatedAt: now,
   });
   return result.insertedId;
